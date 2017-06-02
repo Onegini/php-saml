@@ -2,7 +2,7 @@
 
 $advancedSettings = array (
 
-    // Compression settings 
+    // Compression settings
     // Handle if the getRequest/getResponse methods will return the Request/Response deflated.
     // But if we provide a $deflate boolean parameter to the getRequest or getResponse
     // method it will have priority over the compression settings.
@@ -40,6 +40,13 @@ $advancedSettings = array (
         */
         'signMetadata' => false,
 
+        // Inline login password encryption key (256 bits). Must be set when 'using urn:com:onegini:saml:InlineLogin' auth context.
+        // This key must also be set in the IDP with the 'IDP_AUTHENTICATION_PASSWORD_ENCRYPTION_KEY' env variable
+        // Example key generation (shell):
+        //  $ dd if=/dev/random bs=32 count=1 | base64
+        // Then set the key with:
+        //  'inlineLoginKey' => base64_decode('[base64 encoded key]'),
+        'inlineLoginKey' => '[My secure random generated key]',
 
         /** signatures and encryptions required **/
 
@@ -66,7 +73,9 @@ $advancedSettings = array (
         // Authentication context.
         // Set to false and no AuthContext will be sent in the AuthNRequest,
         // Set true or don't present this parameter and you will get an AuthContext 'exact' 'urn:oasis:names:tc:SAML:2.0:ac:classes:PasswordProtectedTransport'
-        // Set an array with the possible auth context values: array ('urn:oasis:names:tc:SAML:2.0:ac:classes:Password', 'urn:oasis:names:tc:SAML:2.0:ac:classes:X509'),
+        // Set an array with the possible auth context values:
+        // array ('urn:oasis:names:tc:SAML:2.0:ac:classes:Password', 'urn:oasis:names:tc:SAML:2.0:ac:classes:X509', 'urn:com:onegini:saml:InlineLogin').
+        // If 'urn:com:onegini:saml:InlineLogin' is included make sure to specify a username and password when using OneLogin_Saml2_Auth()->login()
         'requestedAuthnContext' => false,
 
         // Allows the authn comparison parameter to be set, defaults to 'exact' if

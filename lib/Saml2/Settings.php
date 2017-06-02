@@ -617,6 +617,14 @@ class OneLogin_Saml2_Settings
             }
         }
 
+        if (isset($security['requestedAuthnContext'])
+            && is_array($security['requestedAuthnContext'])
+            && in_array(OneLogin_Saml2_Constants::AC_INLINE_LOGIN, $security['requestedAuthnContext'])
+            && !isset($security['inlineLoginKey'])
+        ) {
+            $errors[] = 'inline_login_password_encryption_key_not_set';
+        }
+
         if (isset($settings['contactPerson'])) {
             $types = array_keys($settings['contactPerson']);
             $validTypes = array('technical', 'support', 'administrative', 'billing', 'other');
