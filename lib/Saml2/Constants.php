@@ -1,5 +1,5 @@
 <?php
- 
+
 /**
  * Constants of OneLogin PHP Toolkit
  *
@@ -52,6 +52,7 @@ class OneLogin_Saml2_Constants
     const AC_KERBEROS = 'urn:oasis:names:tc:SAML:2.0:ac:classes:Kerberos';
     const AC_WINDOWS = 'urn:federation:authentication:windows';
     const AC_TLS = 'urn:oasis:names:tc:SAML:2.0:ac:classes:TLSClient';
+    const AC_INLINE_LOGIN = 'urn:com:onegini:saml:InlineLogin';
 
     // Subject Confirmation
     const CM_BEARER = 'urn:oasis:names:tc:SAML:2.0:cm:bearer';

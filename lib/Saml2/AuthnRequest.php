@@ -4,6 +4,7 @@
  * SAML 2 Authentication Request
  *
  */
+
 class OneLogin_Saml2_AuthnRequest
 {
 
@@ -29,11 +30,13 @@ class OneLogin_Saml2_AuthnRequest
      * Constructs the AuthnRequest object.
      *
      * @param OneLogin_Saml2_Settings $settings Settings
-     * @param bool   $forceAuthn      When true the AuthNReuqest will set the ForceAuthn='true'
-     * @param bool   $isPassive       When true the AuthNReuqest will set the Ispassive='true'
-     * @param bool   $setNameIdPolicy When true the AuthNReuqest will set a nameIdPolicy
+     * @param bool        $forceAuthn      When true the AuthNReuqest will set the ForceAuthn='true'
+     * @param bool        $isPassive       When true the AuthNReuqest will set the Ispassive='true'
+     * @param bool        $setNameIdPolicy When true the AuthNReuqest will set a nameIdPolicy
+     * @param string|null $username Username for inline login
+     * @param string|null $password Password for inline login
      */
-    public function __construct(OneLogin_Saml2_Settings $settings, $forceAuthn = false, $isPassive = false, $setNameIdPolicy = true)
+    public function __construct(OneLogin_Saml2_Settings $settings, $forceAuthn = false, $isPassive = false, $setNameIdPolicy = true, $username = null, $password = null)
     {
         $this->_settings = $settings;
 
@@ -108,10 +111,19 @@ REQUESTEDAUTHN;
             } else {
                 $requestedAuthnStr .= "    <samlp:RequestedAuthnContext Comparison=\"$authnComparison\">\n";
                 foreach ($security['requestedAuthnContext'] as $contextValue) {
-                    $requestedAuthnStr .= "        <saml:AuthnContextClassRef>".$contextValue."</saml:AuthnContextClassRef>\n";
+                    $requestedAuthnStr .= "        <saml:AuthnContextClassRef>" . $contextValue . "</saml:AuthnContextClassRef>\n";
                 }
                 $requestedAuthnStr .= '    </samlp:RequestedAuthnContext>';
             }
+        }
+
+        $inlineLogin = '';
+        if (is_array($security['requestedAuthnContext'])
+            && in_array(OneLogin_Saml2_Constants::AC_INLINE_LOGIN, $security['requestedAuthnContext'])
+            && $username != null
+            && $password != null
+        ) {
+            $inlineLogin = (new OneLogin_Saml2_InlineLogin($security['inlineLoginKey'], $username, $password))->getXml();
         }
 
         $sp_entity_id = htmlspecialchars($spData['entityId'], ENT_QUOTES);
@@ -130,6 +142,7 @@ REQUESTEDAUTHN;
     <saml:Issuer>{$sp_entity_id}</saml:Issuer>
 {$nameIdPolicyStr}
 {$requestedAuthnStr}
+{$inlineLogin}
 </samlp:AuthnRequest>
 AUTHNREQUEST;
 
