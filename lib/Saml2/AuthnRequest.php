@@ -117,13 +117,29 @@ REQUESTEDAUTHN;
             }
         }
 
-        $inlineLogin = '';
+        $inlineLoginStr = '';
         if (is_array($security['requestedAuthnContext'])
             && in_array(OneLogin_Saml2_Constants::AC_INLINE_LOGIN, $security['requestedAuthnContext'])
             && $username != null
             && $password != null
         ) {
-            $inlineLogin = (new OneLogin_Saml2_InlineLogin($security['inlineLoginKey'], $username, $password))->getXml();
+            $inlineLogin = new OneLogin_Saml2_InlineLogin($security['inlineLoginKey'], $username, $password);
+            $saveUsername = htmlspecialchars($username);
+            $encryptedPasswordBase64 = base64_encode($inlineLogin->getEncryptedPassword());
+            $ivBase64 = base64_encode($inlineLogin->getIv());
+
+            $inlineLoginStr = <<<INLINELOGIN
+    <md:Extensions xmlns:md="urn:oasis:names:tc:SAML:2.0:metadata">
+        <onegini:InlineLogin
+            xmlns:onegini="urn:com:onegini:saml:InlineLogin"
+            IdpType="unp_idp">
+            <onegini:Credentials
+                Username="$saveUsername"
+                Password="$encryptedPasswordBase64"
+                EncryptionParameter="$ivBase64"/>
+        </onegini:InlineLogin>
+    </md:Extensions>
+INLINELOGIN;
         }
 
         $sp_entity_id = htmlspecialchars($spData['entityId'], ENT_QUOTES);
@@ -142,7 +158,7 @@ REQUESTEDAUTHN;
     <saml:Issuer>{$sp_entity_id}</saml:Issuer>
 {$nameIdPolicyStr}
 {$requestedAuthnStr}
-{$inlineLogin}
+{$inlineLoginStr}
 </samlp:AuthnRequest>
 AUTHNREQUEST;
 
