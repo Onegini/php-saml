@@ -1,113 +1,51 @@
 <?php
+/**
+ * SAMPLE Code for a Login page.
+ *
+ * If the user is logged in, a table with their SAML attributes will be printed.
+ * Otherwise, a login form an a Link to login through Facebook are displayed.
+ */
 
 session_start();
 
-require_once '../vendor/autoload.php';
-require_once 'settings_example.php';
-
-$auth = new OneLogin_Saml2_Auth($settings);
-
-if (isset($_GET['sso'])) {
-    $username = '';
-    $password = '';
-
-    if (empty($_POST['username']) || empty($_POST['password'])) {
-        header('Location: /', true, 303);
-        die();
-    } else {
-        $username = $_POST['username'];
-        $password = $_POST['password'];
-    }
-
-    $auth->login($returnTo = $settings['baseurl'] . '/attrs.php',
-        $parameters = array(),
-        $forceAuthn = false,
-        $isPassive = false,
-        $stay = false,
-        $setNameIdPolicy = true,
-        $username,
-        $password);
-} else if (isset($_GET['slo'])) {
-    $returnTo = null;
-    $parameters = array();
-    $nameId = null;
-    $sessionIndex = null;
-    $nameIdFormat = null;
-
-    if (isset($_SESSION['samlNameId'])) {
-        $nameId = $_SESSION['samlNameId'];
-    }
-    if (isset($_SESSION['samlSessionIndex'])) {
-        $sessionIndex = $_SESSION['samlSessionIndex'];
-    }
-    if (isset($_SESSION['samlNameIdFormat'])) {
-        $nameIdFormat = $_SESSION['samlNameIdFormat'];
-    }
-
-    $auth->logout($returnTo, $parameters, $nameId, $sessionIndex, false, $nameIdFormat);
-} else if (isset($_GET['acs'])) {
-    if (isset($_SESSION) && isset($_SESSION['AuthNRequestID'])) {
-        $requestID = $_SESSION['AuthNRequestID'];
-    } else {
-        $requestID = null;
-    }
-
-    $auth->processResponse($requestID);
-
-    $errors = $auth->getErrors();
-
-    if (!empty($errors)) {
-        print_r('<p>' . implode(', ', $errors) . '</p>');
-    }
-
-    if (!$auth->isAuthenticated()) {
-        echo "<p>Not authenticated</p>";
-        exit();
-    }
-
-    $_SESSION['samlUserdata'] = $auth->getAttributes();
-    $_SESSION['samlNameId'] = $auth->getNameId();
-    $_SESSION['samlNameIdFormat'] = $auth->getNameIdFormat();
-    $_SESSION['samlSessionIndex'] = $auth->getSessionIndex();
-    unset($_SESSION['AuthNRequestID']);
-    if (isset($_POST['RelayState']) && OneLogin_Saml2_Utils::getSelfURL() != $_POST['RelayState']) {
-        $auth->redirectTo($_POST['RelayState']);
-    }
-} else if (isset($_GET['sls'])) {
-    if (isset($_SESSION) && isset($_SESSION['LogoutRequestID'])) {
-        $requestID = $_SESSION['LogoutRequestID'];
-    } else {
-        $requestID = null;
-    }
-
-    $auth->processSLO(false, $requestID);
-    $errors = $auth->getErrors();
-    if (empty($errors)) {
-        print_r('<p>Sucessfully logged out</p>');
-    } else {
-        print_r('<p>' . implode(', ', $errors) . '</p>');
-    }
-}
-
-if (isset($_SESSION['samlUserdata'])) {
-    header('Location: attrs.php', true, 303);
-    die();
-} else {
-    echo '<style>
-form {
-    display: flex;
-    flex-direction: column;
+echo '<style>
+.container {
     max-width: 400px;
     margin: 0 auto;
 }
-
+form {
+    display: flex;
+    flex-direction: column;
+}
 input {
   margin: 3px;
 }
-</style>
-<form method="POST" action="?sso">
-  <input type="text" name="username" placeholder="Username" required />
-  <input type="password" name="password" placeholder="Password" required />
-  <input type="submit" value="Login" />
-</form>';
+</style>';
+
+if (isset($_SESSION['samlUserdata'])) {
+    if (!empty($_SESSION['samlUserdata'])) {
+        $attributes = $_SESSION['samlUserdata'];
+        echo 'You have the following attributes:<br>';
+        echo '<table><thead><th>Name</th><th>Values</th></thead><tbody>';
+        foreach ($attributes as $attributeName => $attributeValues) {
+            echo '<tr><td>' . htmlentities($attributeName) . '</td><td><ul>';
+            foreach ($attributeValues as $attributeValue) {
+                echo '<li>' . htmlentities($attributeValue) . '</li>';
+            }
+            echo '</ul></td></tr>';
+        }
+        echo '</tbody></table>';
+    } else {
+        echo "<p>You don't have any attribute</p>";
+    }
+    echo '<p><a href="slo.php" >Logout</a></p>';
+} else {
+    echo '<div class="container">
+    <form method="POST" action="sso.php?authnContext=inline">
+      <input type="text" name="username" placeholder="Username" required />
+      <input type="password" name="password" placeholder="Password" required />
+      <input type="submit" value="Login with password" />
+    </form>
+    <a href="sso.php?authnContext=facebook">Login with Facebook</a>
+</div>';
 }

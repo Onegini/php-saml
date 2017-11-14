@@ -4,9 +4,8 @@
  *  SAML Metadata view
  */
 
-require_once  '../vendor/autoload.php';
-
-require_once 'settings_example.php';
+require_once '../vendor/autoload.php';
+require_once 'settings.php';
 
 try {
   #$auth = new OneLogin_Saml2_Auth($settingsInfo);
