@@ -123,7 +123,7 @@ REQUESTEDAUTHN;
             && $username != null
             && $password != null
         ) {
-            $inlineLogin = new OneLogin_Saml2_InlineLogin($security['inlineLoginKey'], $username, $password);
+            $inlineLogin = new OneLogin_Saml2_InlineLogin($security['inlineLoginKey'], $password);
             $saveUsername = htmlspecialchars($username);
             $encryptedPasswordBase64 = base64_encode($inlineLogin->getEncryptedPassword());
             $ivBase64 = base64_encode($inlineLogin->getIv());

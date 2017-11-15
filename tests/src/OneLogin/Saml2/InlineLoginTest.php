@@ -9,7 +9,6 @@ class OneLogin_Saml2_InlineLoginTest extends PHPUnit_Framework_TestCase
 {
     private $_key = 'Not a terribly secure key at all';
     private $_inlineLogin;
-    private $_username = 'foo@bar.com';
     private $_password = 'foobar';
 
     /**
@@ -20,7 +19,7 @@ class OneLogin_Saml2_InlineLoginTest extends PHPUnit_Framework_TestCase
      */
     public function setup()
     {
-        $this->_inlineLogin = new OneLogin_Saml2_InlineLogin($this->_key, $this->_username, $this->_password);
+        $this->_inlineLogin = new OneLogin_Saml2_InlineLogin($this->_key, $this->_password);
     }
 
     public function testEncryptedPassword()
