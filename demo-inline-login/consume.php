@@ -19,6 +19,8 @@ try {
         $samlResponse = new OneLogin_Saml2_Response($samlSettings, $_POST['SAMLResponse']);
         if ($samlResponse->isValid()) {
             $_SESSION['samlUserdata'] = $samlResponse->getAttributes();
+            $_SESSION['samlSessionIndex'] = $samlResponse->getSessionIndex();
+            $_SESSION['samlNameId'] = $samlResponse->getNameId();
             header('Location: /', true, 303);
         } else {
             echo 'Invalid SAML Response';
