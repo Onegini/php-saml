@@ -15,7 +15,7 @@ class OneLogin_Saml2_InlineLogin
         $this->_iv = $iv;
     }
 
-    public function getEncryptedPassword(): string
+    public function getEncryptedPassword()
     {
         return $this->_encryptedPassword;
     }

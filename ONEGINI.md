@@ -34,13 +34,14 @@ $auth->login($returnTo = null,
     $isPassive = false,
     $stay = false,
     $setNameIdPolicy = true,
+    $nameIdValueReq = null,
     $username = 'my_username',
     $password = 'my_password');
 ```
 
 Alternatively you can construct an authentication request:
 ```php
-new OneLogin_Saml2_AuthnRequest($settings, $forceAuthn = false, $isPassive = false, $setNameIdPolicy = true, $username = 'my_username', $password = 'my_password');
+new OneLogin_Saml2_AuthnRequest($settings, $forceAuthn = false, $isPassive = false, $setNameIdPolicy = true, $nameIdValueReq=null, $username = 'my_username', $password = 'my_password');
 ```
 
 An example login page is available in the `demo-inline-login` directory.

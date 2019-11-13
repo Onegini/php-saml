@@ -265,7 +265,7 @@ class OneLogin_Saml2_LogoutRequestTest extends PHPUnit_Framework_TestCase
     /**
     * Tests the OneLogin_Saml2_LogoutRequest Constructor.
     * Case: Able to generate encryptedID with MultiCert
-    * 
+    *
     * @covers OneLogin_Saml2_LogoutRequest
     */
     public function testConstructorEncryptIdUsingX509certMulti()
@@ -374,6 +374,26 @@ class OneLogin_Saml2_LogoutRequestTest extends PHPUnit_Framework_TestCase
             $this->assertContains('NameID not found in the Logout Request', $e->getMessage());
         }
 
+        $idpData = $this->_settings->getIdPData();
+        $spData = $this->_settings->getSPData();
+        $logoutRequest = new OneLogin_Saml2_LogoutRequest($this->_settings, null, "ONELOGIN_1e442c129e1f822c8096086a1103c5ee2c7cae1c", null, OneLogin_Saml2_Constants::NAMEID_PERSISTENT, $idpData['entityId'], $spData['entityId']);
+        $logoutRequestStr = $logoutRequest->getXML();
+        $this->assertContains('ONELOGIN_1e442c129e1f822c8096086a1103c5ee2c7cae1c', $logoutRequestStr);
+        $this->assertContains('Format="'.OneLogin_Saml2_Constants::NAMEID_PERSISTENT, $logoutRequestStr);
+        $this->assertContains('NameQualifier="'.$idpData['entityId'], $logoutRequestStr);
+        $this->assertContains('SPNameQualifier="'.$spData['entityId'], $logoutRequestStr);
+         $logoutRequest2 = new OneLogin_Saml2_LogoutRequest($this->_settings, null, "ONELOGIN_1e442c129e1f822c8096086a1103c5ee2c7cae1c", null, OneLogin_Saml2_Constants::NAMEID_ENTITY, $idpData['entityId'], $spData['entityId']);
+        $logoutRequestStr2 = $logoutRequest2->getXML();
+        $this->assertContains('ONELOGIN_1e442c129e1f822c8096086a1103c5ee2c7cae1c', $logoutRequestStr2);
+        $this->assertContains('Format="'.OneLogin_Saml2_Constants::NAMEID_ENTITY, $logoutRequestStr2);
+        $this->assertNotContains('NameQualifier', $logoutRequestStr2);
+        $this->assertNotContains('SPNameQualifier', $logoutRequestStr2);
+         $logoutRequest3 = new OneLogin_Saml2_LogoutRequest($this->_settings, null, "ONELOGIN_1e442c129e1f822c8096086a1103c5ee2c7cae1c", null, OneLogin_Saml2_Constants::NAMEID_UNSPECIFIED);
+        $logoutRequestStr3 = $logoutRequest3->getXML();
+        $this->assertContains('ONELOGIN_1e442c129e1f822c8096086a1103c5ee2c7cae1c', $logoutRequestStr3);
+        $this->assertNotContains('Format', $logoutRequestStr3);
+        $this->assertNotContains('NameQualifier', $logoutRequestStr3);
+        $this->assertNotContains('SPNameQualifier', $logoutRequestStr3);
     }
 
     /**
@@ -828,7 +848,7 @@ class OneLogin_Saml2_LogoutRequestTest extends PHPUnit_Framework_TestCase
         $logoutRequest = new OneLogin_Saml2_LogoutRequest($settings);
         $xml = $logoutRequest->getXML();
         $this->assertRegExp('#^<samlp:LogoutRequest#', $xml);
-    
+
         $logoutRequestProcessed = new OneLogin_Saml2_LogoutRequest($settings, base64_encode($xml));
         $xml2 = $logoutRequestProcessed->getXML();
         $this->assertRegExp('#^<samlp:LogoutRequest#', $xml2);
@@ -849,9 +869,28 @@ class OneLogin_Saml2_LogoutRequestTest extends PHPUnit_Framework_TestCase
         $xml = $logoutRequest->getXML();
         $id1 = OneLogin_Saml2_LogoutRequest::getID($xml);
         $this->assertNotNull($id1);
-    
+
         $logoutRequestProcessed = new OneLogin_Saml2_LogoutRequest($settings, base64_encode($xml));
         $id2 = $logoutRequestProcessed->id;
         $this->assertEquals($id1, $id2);
+    }
+
+    /**
+     * Tests that the LogoutRequest throws an exception
+     *
+     * @covers OneLogin_Saml2_LogoutRequest::getID()
+     *
+     * @expectedException OneLogin_Saml2_Error
+     * @expectedExceptionMessage LogoutRequest could not be processed
+     */
+    public function testGetIDException()
+    {
+        $settingsDir = TEST_ROOT .'/settings/';
+        include $settingsDir.'settings1.php';
+
+        $settings = new OneLogin_Saml2_Settings($settingsInfo);
+        $logoutRequest = new OneLogin_Saml2_LogoutRequest($settings);
+        $xml = $logoutRequest->getXML();
+        $id1 = OneLogin_Saml2_LogoutRequest::getID($xml.'<garbage>');
     }
 }

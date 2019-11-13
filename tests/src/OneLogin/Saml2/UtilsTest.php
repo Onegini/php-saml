@@ -70,9 +70,9 @@ class OneLogin_Saml2_UtilsTest extends PHPUnit_Framework_TestCase
                       <!ENTITY xxe SYSTEM "file:///etc/passwd" >]><foo>&xxe;</foo>';
         try {
             $res = OneLogin_Saml2_Utils::loadXML($dom, $attackXXE);
-            $this->fail('Exception was not raised');
+            $this->assertFalse($res);
         } catch (Exception $e) {
-            $this->assertEquals('Detected use of ENTITY in XML, disabled to prevent XXE/XEE attacks', $e->getMessage());
+            $this->assertEquals('Detected use of DOCTYPE/ENTITY in XML, disabled to prevent XXE/XEE attacks', $e->getMessage());
         }
 
         $xmlWithDTD = '<?xml version="1.0"?>
@@ -83,8 +83,12 @@ class OneLogin_Saml2_UtilsTest extends PHPUnit_Framework_TestCase
                           <results>
                             <result>test</result>
                           </results>';
-        $res2 = OneLogin_Saml2_Utils::loadXML($dom, $xmlWithDTD);
-        $this->assertTrue($res2 instanceof DOMDocument);
+        try {
+            $res2 = OneLogin_Saml2_Utils::loadXML($dom, $xmlWithDTD);
+            $this->assertFalse($res2);
+        } catch (Exception $e) {
+            $this->assertEquals('Detected use of DOCTYPE/ENTITY in XML, disabled to prevent XXE/XEE attacks', $e->getMessage());
+        }
 
         $attackXEE = '<?xml version="1.0"?>
                       <!DOCTYPE results [<!ENTITY harmless "completely harmless">]>
@@ -93,9 +97,24 @@ class OneLogin_Saml2_UtilsTest extends PHPUnit_Framework_TestCase
                       </results>';
         try {
             $res3 = OneLogin_Saml2_Utils::loadXML($dom, $attackXEE);
-            $this->fail('Exception was not raised');
+            $this->assertFalse($res3);
         } catch (Exception $e) {
-            $this->assertEquals('Detected use of ENTITY in XML, disabled to prevent XXE/XEE attacks', $e->getMessage());
+            $this->assertEquals('Detected use of DOCTYPE/ENTITY in XML, disabled to prevent XXE/XEE attacks', $e->getMessage());
+        }
+
+        $attackXEEutf16 = mb_convert_encoding(
+            '<?xml version="1.0" encoding="UTF-16"?>
+                      <!DOCTYPE results [<!ENTITY harmless "completely harmless">]>
+                      <results>
+                        <result>This result is &harmless;</result>
+                      </results>',
+            'UTF-16'
+        );
+        try {
+            $res4 = OneLogin_Saml2_Utils::loadXML($dom, $attackXEEutf16);
+            $this->assertFalse($res4);
+        } catch (Exception $e) {
+            $this->assertEquals('Detected use of DOCTYPE/ENTITY in XML, disabled to prevent XXE/XEE attacks', $e->getMessage());
         }
     }
 
@@ -455,7 +474,7 @@ class OneLogin_Saml2_UtilsTest extends PHPUnit_Framework_TestCase
         $this->assertNull(OneLogin_Saml2_Utils::getSelfPort());
         $this->assertNull(OneLogin_Saml2_Utils::getBaseURLPath());
 
-        $this->assertEquals($expectedUrlNQ, OneLogin_Saml2_Utils::getSelfURLNoQuery());       
+        $this->assertEquals($expectedUrlNQ, OneLogin_Saml2_Utils::getSelfURLNoQuery());
         $this->assertEquals($expectedRoutedUrlNQ, OneLogin_Saml2_Utils::getSelfRoutedURLNoQuery());
         $this->assertEquals($expectedUrl, OneLogin_Saml2_Utils::getSelfURL());
 
@@ -469,14 +488,14 @@ class OneLogin_Saml2_UtilsTest extends PHPUnit_Framework_TestCase
         $this->assertEquals('81', OneLogin_Saml2_Utils::getSelfPort());
         $this->assertEquals('/example2/', OneLogin_Saml2_Utils::getBaseURLPath());
 
-        $this->assertEquals($expectedUrlNQ2, OneLogin_Saml2_Utils::getSelfURLNoQuery());       
+        $this->assertEquals($expectedUrlNQ2, OneLogin_Saml2_Utils::getSelfURLNoQuery());
         $this->assertEquals($expectedRoutedUrlNQ2, OneLogin_Saml2_Utils::getSelfRoutedURLNoQuery());
         $this->assertEquals($expectedUrl2, OneLogin_Saml2_Utils::getSelfURL());
 
         $_SERVER['PATH_INFO'] = '/test';
         $expectedUrlNQ2 = 'http://anothersp.example.com:81/example2/route.php/test';
 
-        $this->assertEquals($expectedUrlNQ2, OneLogin_Saml2_Utils::getSelfURLNoQuery());       
+        $this->assertEquals($expectedUrlNQ2, OneLogin_Saml2_Utils::getSelfURLNoQuery());
         $this->assertEquals($expectedRoutedUrlNQ2, OneLogin_Saml2_Utils::getSelfRoutedURLNoQuery());
         $this->assertEquals($expectedUrl2, OneLogin_Saml2_Utils::getSelfURL());
     }
@@ -929,7 +948,6 @@ class OneLogin_Saml2_UtilsTest extends PHPUnit_Framework_TestCase
             // Can't test that on TRAVIS
             $this->markTestSkipped("Can't test that on TRAVIS");
         } else {
-
             if (!isset($_SESSION)) {
                 $_SESSION = array();
             }
@@ -964,7 +982,6 @@ class OneLogin_Saml2_UtilsTest extends PHPUnit_Framework_TestCase
             // Can't test that on TRAVIS
             $this->markTestSkipped("Can't test that on TRAVIS");
         } else {
-
             $this->assertFalse(OneLogin_Saml2_Utils::isSessionStarted());
 
             $prev = error_reporting(0);
@@ -993,6 +1010,12 @@ class OneLogin_Saml2_UtilsTest extends PHPUnit_Framework_TestCase
         $cert = file_get_contents($certPath.'sp.crt');
 
         $this->assertNull(OneLogin_Saml2_Utils::calculateX509Fingerprint($key));
+
+        $this->assertNull(OneLogin_Saml2_Utils::calculateX509Fingerprint(""));
+
+        $this->assertNull(OneLogin_Saml2_Utils::calculateX509Fingerprint($settingsInfo['idp']['x509cert']));
+
+        $this->assertEquals('afe71c28ef740bc87425be13a2263d37971da1f9', OneLogin_Saml2_Utils::calculateX509Fingerprint(OneLogin_Saml2_Utils::formatCert($settingsInfo['idp']['x509cert'])));
 
         $this->assertEquals('afe71c28ef740bc87425be13a2263d37971da1f9', OneLogin_Saml2_Utils::calculateX509Fingerprint($cert));
 

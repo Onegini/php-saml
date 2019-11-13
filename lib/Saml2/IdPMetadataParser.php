@@ -35,11 +35,12 @@ class OneLogin_Saml2_IdPMetadataParser
 
             $xml = curl_exec($ch);
             if ($xml !== false) {
-                $metadataInfo = self::parseXML($xml, $entityId, $desiredSSOBinding, $desiredSLOBinding);
+                $metadataInfo = self::parseXML($xml, $entityId, $desiredNameIdFormat, $desiredSSOBinding, $desiredSLOBinding);
             } else {
                 throw new Exception(curl_error($ch), curl_errno($ch));
             }
         } catch (Exception $e) {
+            throw new Exception('Error on parseRemoteXML. '.$e->getMessage());
         }
         return $metadataInfo;
     }
@@ -65,9 +66,10 @@ class OneLogin_Saml2_IdPMetadataParser
         try {
             if (file_exists($filepath)) {
                 $data = file_get_contents($filepath);
-                $metadataInfo = self::parseXML($data, $entityId, $desiredSSOBinding, $desiredSLOBinding);
+                $metadataInfo = self::parseXML($data, $entityId, $desiredNameIdFormat, $desiredSSOBinding, $desiredSLOBinding);
             }
         } catch (Exception $e) {
+            throw new Exception('Error on parseFileXML. '.$e->getMessage());
         }
         return $metadataInfo;
     }
@@ -85,7 +87,8 @@ class OneLogin_Saml2_IdPMetadataParser
      * @param string $desiredSLOBinding     Parse specific binding SLO endpoint.
      *
      * @return array metadata info in php-saml settings format
-     * @throws \Exception
+     *
+     * @throws Exception
      */
     public static function parseXML($xml, $entityId = null, $desiredNameIdFormat = null, $desiredSSOBinding = OneLogin_Saml2_Constants::BINDING_HTTP_REDIRECT, $desiredSLOBinding = OneLogin_Saml2_Constants::BINDING_HTTP_REDIRECT)
     {
@@ -141,6 +144,10 @@ class OneLogin_Saml2_IdPMetadataParser
                         'url' => $sloNodes->item(0)->getAttribute('Location'),
                         'binding' => $sloNodes->item(0)->getAttribute('Binding')
                     );
+
+                    if ($sloNodes->item(0)->hasAttribute('ResponseLocation')) {
+                        $metadataInfo['idp']['singleLogoutService']['responseUrl'] = $sloNodes->item(0)->getAttribute('ResponseLocation');
+                    }
                 }
 
                 $keyDescriptorCertSigningNodes = OneLogin_Saml2_Utils::query($dom, './md:KeyDescriptor[not(contains(@use, "encryption"))]/ds:KeyInfo/ds:X509Data/ds:X509Certificate', $idpDescriptor);
@@ -161,8 +168,8 @@ class OneLogin_Saml2_IdPMetadataParser
                     }
 
                     $idpCertdata = $metadataInfo['idp']['x509certMulti'];
-                    if (count($idpCertdata) == 1 and
-                        ((isset($idpCertdata['signing']) and count($idpCertdata['signing']) == 1) or (isset($idpCertdata['encryption']) and count($idpCertdata['encryption']) == 1)) or
+                    if ((count($idpCertdata) == 1 and
+                        ((isset($idpCertdata['signing']) and count($idpCertdata['signing']) == 1) or (isset($idpCertdata['encryption']) and count($idpCertdata['encryption']) == 1))) or
                         ((isset($idpCertdata['signing']) && count($idpCertdata['signing']) == 1) && isset($idpCertdata['encryption']) && count($idpCertdata['encryption']) == 1 && strcmp($idpCertdata['signing'][0], $idpCertdata['encryption'][0]) == 0)) {
                         if (isset($metadataInfo['idp']['x509certMulti']['signing'][0])) {
                             $metadataInfo['idp']['x509cert'] = $metadataInfo['idp']['x509certMulti']['signing'][0];

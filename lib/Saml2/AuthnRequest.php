@@ -4,7 +4,6 @@
  * SAML 2 Authentication Request
  *
  */
-
 class OneLogin_Saml2_AuthnRequest
 {
 
@@ -33,10 +32,11 @@ class OneLogin_Saml2_AuthnRequest
      * @param bool        $forceAuthn      When true the AuthNReuqest will set the ForceAuthn='true'
      * @param bool        $isPassive       When true the AuthNReuqest will set the Ispassive='true'
      * @param bool        $setNameIdPolicy When true the AuthNReuqest will set a nameIdPolicy
+     * @param string $nameIdValueReq Indicates to the IdP the subject that should be authenticated
      * @param string|null $username Username for inline login
      * @param string|null $password Password for inline login
      */
-    public function __construct(OneLogin_Saml2_Settings $settings, $forceAuthn = false, $isPassive = false, $setNameIdPolicy = true, $username = null, $password = null)
+    public function __construct(OneLogin_Saml2_Settings $settings, $forceAuthn = false, $isPassive = false, $setNameIdPolicy = true, $nameIdValueReq = null, $username = null, $password = null)
     {
         $this->_settings = $settings;
 
@@ -47,6 +47,17 @@ class OneLogin_Saml2_AuthnRequest
         $id = OneLogin_Saml2_Utils::generateUniqueID();
         $issueInstant = OneLogin_Saml2_Utils::parseTime2SAML(time());
 
+        $subjectStr = "";
+        if (isset($nameIdValueReq)) {
+            $subjectStr = <<<SUBJECT
+
+    <saml:Subject>
+        <saml:NameID Format="{$spData['NameIDFormat']}">{$nameIdValueReq}</saml:NameID>
+        <saml:SubjectConfirmation Method="urn:oasis:names:tc:SAML:2.0:cm:bearer"></saml:SubjectConfirmation>
+    </saml:Subject>
+SUBJECT;
+        }
+
         $nameIdPolicyStr = '';
         if ($setNameIdPolicy) {
             $nameIDPolicyFormat = $spData['NameIDFormat'];
@@ -55,6 +66,7 @@ class OneLogin_Saml2_AuthnRequest
             }
 
             $nameIdPolicyStr = <<<NAMEIDPOLICY
+
     <samlp:NameIDPolicy
         Format="{$nameIDPolicyFormat}"
         AllowCreate="true" />
@@ -96,20 +108,25 @@ ISPASSIVE;
 
         $requestedAuthnStr = '';
         if (isset($security['requestedAuthnContext']) && $security['requestedAuthnContext'] !== false) {
-
             $authnComparison = 'exact';
             if (isset($security['requestedAuthnContextComparison'])) {
                 $authnComparison = $security['requestedAuthnContextComparison'];
             }
 
+            $authnComparisonAttr = '';
+            if (!empty($authnComparison)) {
+                $authnComparisonAttr = sprintf('Comparison="%s"', $authnComparison);
+            }
+
             if ($security['requestedAuthnContext'] === true) {
                 $requestedAuthnStr = <<<REQUESTEDAUTHN
-    <samlp:RequestedAuthnContext Comparison="$authnComparison">
+
+    <samlp:RequestedAuthnContext $authnComparisonAttr>
         <saml:AuthnContextClassRef>urn:oasis:names:tc:SAML:2.0:ac:classes:PasswordProtectedTransport</saml:AuthnContextClassRef>
     </samlp:RequestedAuthnContext>
 REQUESTEDAUTHN;
             } else {
-                $requestedAuthnStr .= "    <samlp:RequestedAuthnContext Comparison=\"$authnComparison\">\n";
+                $requestedAuthnStr .= "    <samlp:RequestedAuthnContext $authnComparisonAttr>\n";
                 foreach ($security['requestedAuthnContext'] as $contextValue) {
                     $requestedAuthnStr .= "        <saml:AuthnContextClassRef>" . $contextValue . "</saml:AuthnContextClassRef>\n";
                 }
@@ -155,10 +172,7 @@ INLINELOGIN;
     Destination="{$idpData['singleSignOnService']['url']}"
     ProtocolBinding="{$spData['assertionConsumerService']['binding']}"
     AssertionConsumerServiceURL="{$acsUrl}">
-    <saml:Issuer>{$spEntityId}</saml:Issuer>
-{$nameIdPolicyStr}
-{$requestedAuthnStr}
-{$inlineLoginStr}
+    <saml:Issuer>{$spEntityId}</saml:Issuer>{$subjectStr}{$nameIdPolicyStr}{$requestedAuthnStr}{$inlineLoginStr}
 </samlp:AuthnRequest>
 AUTHNREQUEST;
 
@@ -170,6 +184,8 @@ AUTHNREQUEST;
      * Returns deflated, base64 encoded, unsigned AuthnRequest.
      *
      * @param bool|null $deflate Whether or not we should 'gzdeflate' the request body before we return it.
+     *
+     * @return string
      */
     public function getRequest($deflate = null)
     {
